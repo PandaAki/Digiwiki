@@ -1,0 +1,26 @@
+{
+  "name": "game-database-viewer",
+  "version": "1.6.0",
+  "description": "遊戲資料庫預覽系統 - Excel 資料庫網頁預覽工具",
+  "main": "index.html",
+  "scripts": {
+    "convert": "node tools/convert-to-json.js",
+    "help": "echo '使用方法：npm run convert - 將 data.xlsx 轉換為 JSON'"
+  },
+  "keywords": [
+    "excel",
+    "database",
+    "viewer",
+    "game",
+    "data"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/game-database.git"
+  }
+}

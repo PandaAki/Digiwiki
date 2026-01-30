@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>遊戲資料庫預覽系統</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🎮 遊戲資料庫預覽系統</h1>
+            <div class="controls">
+                <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;">
+                <button id="loadBtn" class="btn-primary">選擇 Excel 檔案</button>
+                <button id="backBtn" class="btn-secondary" style="display: none;">← 返回首頁</button>
+                <span id="status" class="status">準備就緒</span>
+            </div>
+        </header>
+
+        <!-- 首頁視圖 -->
+        <main id="homeView" class="view-container" style="display: none;">
+            <div id="homeContainer" class="home-container"></div>
+        </main>
+
+        <!-- 介紹頁視圖 -->
+        <main id="introView" class="view-container"
+            style="display: none; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+            <div id="introContainer" class="intro-content"></div>
+        </main>
+
+        <!-- 詳細資料視圖 -->
+        <main id="detailView" class="view-container" style="display: none;">
+            <div id="cardContainer" class="card-container"></div>
+        </main>
+
+        <!-- 歡迎訊息 -->
+        <div id="welcomeView" class="view-container">
+            <div class="welcome-message">
+                <h2>歡迎使用資料庫預覽系統</h2>
+                <p>點擊「選擇 Excel 檔案」按鈕開始讀取 Excel 檔案</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,41 @@
+# 備份資料夾
+*_backup*/
+backup/
+game-database_backup_v1/
+
+# 資料檔案（使用者自行上傳）
+*.xlsx
+*.xls
+!examples/*.xlsx
+!examples/*.xls
+
+# 系統檔案
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node.js
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 日誌檔案
+*.log
+
+# 臨時檔案
+~$*.xlsx
+~$*.xls
+
+# 本地設定
+.env
+.env.local

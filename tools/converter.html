@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel 轉 JSON 工具</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #718096;
+            margin-bottom: 30px;
+        }
+
+        .upload-area {
+            border: 3px dashed #cbd5e0;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f7fafc;
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #edf2f7;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .status.success {
+            background: #e6fffa;
+            color: #234e52;
+            border: 1px solid #81e6d9;
+        }
+
+        .status.error {
+            background: #fff5f5;
+            color: #c53030;
+            border: 1px solid #fc8181;
+        }
+
+        .status.info {
+            background: #ebf8ff;
+            color: #2c5282;
+            border: 1px solid #90cdf4;
+        }
+
+        .instructions {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+
+        .instructions h3 {
+            color: #2d3748;
+            margin-top: 0;
+        }
+
+        .instructions ol {
+            color: #4a5568;
+            line-height: 1.8;
+        }
+
+        .icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>📊 Excel 轉 JSON 工具</h1>
+        <p class="subtitle">將 Excel 檔案轉換為 JSON 格式</p>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="icon">📁</div>
+            <p>點擊或拖曳 Excel 檔案到此處</p>
+            <p style="color: #a0aec0; font-size: 14px;">支援 .xlsx 和 .xls 格式</p>
+            <input type="file" id="fileInput" accept=".xlsx,.xls">
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <div class="instructions">
+            <h3>使用說明</h3>
+            <ol>
+                <li>點擊上方區域選擇 Excel 檔案</li>
+                <li>工具會自動轉換並下載 JSON 檔案</li>
+                <li>將下載的 <code>sample-data.json</code> 移動到專案的 <code>data/</code> 資料夾</li>
+                <li>重新整理網頁即可看到資料自動載入</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const status = document.getElementById('status');
+
+        // 點擊上傳區域
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // 檔案選擇
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                convertFile(file);
+            }
+        });
+
+        // 拖曳上傳
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                convertFile(file);
+            }
+        });
+
+        // 轉換檔案
+        async function convertFile(file) {
+            showStatus('正在讀取檔案...', 'info');
+
+            try {
+                const data = await file.arrayBuffer();
+                const workbook = XLSX.read(data, { type: 'array' });
+
+                showStatus(`成功讀取 Excel 檔案<br>工作表數量：${workbook.SheetNames.length}`, 'info');
+
+                // 轉換所有工作表
+                const jsonData = {};
+                let totalRows = 0;
+
+                workbook.SheetNames.forEach(sheetName => {
+                    const sheet = workbook.Sheets[sheetName];
+                    const sheetData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                    jsonData[sheetName] = sheetData;
+                    totalRows += sheetData.length;
+                });
+
+                // 轉換為 JSON 字串
+                const jsonString = JSON.stringify(jsonData, null, 2);
+
+                // 下載 JSON 檔案
+                const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'sample-data.json';
+                a.click();
+                URL.revokeObjectURL(url);
+
+                const fileSize = (blob.size / 1024).toFixed(2);
+
+                showStatus(
+                    `✅ 轉換完成！<br>` +
+                    `工作表數量：${workbook.SheetNames.length}<br>` +
+                    `總列數：${totalRows}<br>` +
+                    `檔案大小：${fileSize} KB<br><br>` +
+                    `<strong>sample-data.json 已下載！</strong><br>` +
+                    `請將檔案移動到專案的 data/ 資料夾`,
+                    'success'
+                );
+
+            } catch (error) {
+                showStatus(`❌ 轉換失敗：${error.message}`, 'error');
+            }
+        }
+
+        function showStatus(message, type) {
+            status.innerHTML = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+    </script>
+</body>
+
+</html>
