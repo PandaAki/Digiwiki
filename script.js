@@ -1,5 +1,5 @@
-﻿// 設定圖片基礎路徑 (本地測試用)
-const IMAGE_BASE_PATH = '../Digimonwiki/images/';
+﻿// 設定圖片基礎路徑 (GitHub Pages 版本)
+const IMAGE_BASE_PATH = './images/';
 
 // 全域變數
 let currentWorkbook = null;
@@ -30,6 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
     //         fileInput.value = '';
     //     }
     // });
+
+    // 嘗試自動載入預設 JSON 資料 (GitHub Pages 版本)
+    autoLoadDefaultData();
 });
 
 // 載入 Excel 檔案
@@ -1442,3 +1445,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+
+// ===== GitHub Pages 專用：自動載入 JSON 資料 =====
+async function autoLoadDefaultData() {
+    const statusEl = document.getElementById('status');
+    
+    try {
+        statusEl.textContent = '資料載入中，請稍候...';
+        statusEl.style.background = '#fef5e7';
+        statusEl.style.color = '#7d6608';
+        
+        // 載入 JSON 檔案
+        const response = await fetch('./data/sample-data.json');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const jsonData = await response.json();
+        
+        // 轉換 JSON 為 workbook 格式
+        const workbook = {
+            SheetNames: [],
+            Sheets: {}
+        };
+        
+        for (const sheetName in jsonData) {
+            workbook.SheetNames.push(sheetName);
+            const data = jsonData[sheetName];
+            workbook.Sheets[sheetName] = XLSX.utils.aoa_to_sheet(data);
+        }
+        
+        currentWorkbook = workbook;
+        
+        // 更新網頁標題
+        updatePageTitle(currentWorkbook);
+        
+        // 顯示首頁
+        showHomeView();
+        
+        statusEl.style.background = '#d4edda';
+        statusEl.style.color = '#155724';
+        statusEl.textContent = `已自動載入資料（${workbook.SheetNames.length} 個工作表）`;
+        
+    } catch (error) {
+        console.error('自動載入 JSON 失敗:', error);
+        statusEl.textContent = '資料載入失敗，請檢查 data/sample-data.json 檔案';
+        statusEl.style.background = '#f8d7da';
+        statusEl.style.color = '#721c24';
+        
+        // 顯示歡迎畫面（允許手動上傳 Excel 檔案）
+        switchView('welcome');
+    }
+}
