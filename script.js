@@ -1,5 +1,5 @@
-﻿// 設定圖片基礎路徑
-const IMAGE_BASE_PATH = './images/';
+﻿// 設定圖片基礎路徑 (本地測試用)
+const IMAGE_BASE_PATH = '../Digimonwiki/images/';
 
 // 全域變數
 let currentWorkbook = null;
@@ -30,54 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     //         fileInput.value = '';
     //     }
     // });
-
-    // 嘗試自動載入預設 JSON 資料
-    autoLoadDefaultData();
 });
-
-// 自動載入預設 JSON 資料
-async function autoLoadDefaultData() {
-    try {
-        const response = await fetch('./data/sample-data.json');
-        if (!response.ok) {
-            console.log('沒有預設資料，請手動上傳 Excel 檔案');
-            return;
-        }
-
-        const jsonData = await response.json();
-
-        // 轉換 JSON 為 workbook 格式
-        const workbook = {
-            SheetNames: Object.keys(jsonData),
-            Sheets: {}
-        };
-
-        Object.entries(jsonData).forEach(([sheetName, data]) => {
-            workbook.Sheets[sheetName] = XLSX.utils.aoa_to_sheet(data);
-        });
-
-        // 載入資料
-        currentWorkbook = workbook;
-
-        // 更新網頁標題
-        updatePageTitle(currentWorkbook);
-
-        // 顯示首頁
-        showHomeView();
-
-        // 設定初始歷史記錄狀態
-        history.replaceState({ view: 'home' }, '', '');
-
-        const statusEl = document.getElementById('status');
-        statusEl.textContent = '已載入預設資料';
-        statusEl.style.background = '#e6fffa';
-        statusEl.style.color = '#234e52';
-
-    } catch (error) {
-        console.log('自動載入失敗:', error.message);
-        // 靜默失敗，使用者可以手動上傳
-    }
-}
 
 // 載入 Excel 檔案
 async function loadExcelFile(file) {
@@ -251,14 +204,14 @@ function showDetailView(sheetName) {
     }
 
     const sheetData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-    const processedData = processDetailData(sheetData);
+    const processedData = processDetailData(sheetData, sheetName);
 
     // 顯示詳細資料
     displayDetailCards(processedData);
     switchView('detail');
 
-    // 如果是「超超代」分頁，新增版本篩選器
-    if (sheetName.includes('超超代')) {
+    // 如果是「超超代」或「搖擺X」分頁，新增版本篩選器
+    if (sheetName.includes('超超代') || sheetName === '搖擺X') {
         addVersionFilter(processedData);
     }
 
@@ -267,7 +220,7 @@ function showDetailView(sheetName) {
 }
 
 // 處理詳細資料(原本的26個欄位邏輯)
-function processDetailData(data) {
+function processDetailData(data, sheetName) {
     const processedData = [];
 
     // 從第三列開始(跳過前兩列標題)
@@ -309,9 +262,21 @@ function processDetailData(data) {
             evo3: row[28] || '',           // AC(29): 進化3
             evo4: row[29] || '',           // AD(30): 進化4
             evo5: row[30] || '',           // AE(31): 進化5
-            evo6: row[31] || '',           // AF(32): 進化6
-            version: row[32] || ''         // AG(33): 版本
+            evo6: row[31] || ''            // AF(32): 進化6
         };
+
+        // 判斷是否為搖擺X分頁
+        if (sheetName === '搖擺X') {
+            // 新增圖檔索引欄位 33-36
+            item.itemImage1 = row[32] || '';  // AG(33): 圖檔索引1
+            item.itemImage2 = row[33] || '';  // AH(34): 圖檔索引2
+            item.itemImage3 = row[34] || '';  // AI(35): 圖檔索引3
+            item.itemImage4 = row[35] || '';  // AJ(36): 圖檔索引4
+            item.version = row[36] || '';     // AK(37): 版本
+        } else {
+            // 其他分頁維持原本的版本欄位位置
+            item.version = row[32] || '';     // AG(33): 版本
+        }
 
         processedData.push(item);
     }
@@ -329,6 +294,24 @@ function processDetailData(data) {
 
     return processedData;
 }
+
+// 解析圖檔索引格式（圖檔名稱;數量）
+function parseItemImage(itemImageStr) {
+    if (!itemImageStr || itemImageStr.trim() === '') {
+        return null;
+    }
+
+    const parts = itemImageStr.split(';');
+    if (parts.length !== 2) {
+        return null;
+    }
+
+    return {
+        imageName: parts[0].trim(),
+        quantity: parseInt(parts[1].trim()) || 1
+    };
+}
+
 
 // 顯示詳細資料卡片
 function displayDetailCards(data) {
@@ -489,6 +472,7 @@ function createDetailCard(item) {
         ${createStatsRow(item)}
         ${createAttributesRow(item)}
         ${createInfoSection(item)}
+        ${createItemImagesSection(item)}
         ${createDescriptionSection(item)}
         ${createImagesSection(item)}
     `;
@@ -662,6 +646,43 @@ function createImagesSection(item) {
     `;
 }
 
+// 建立道具圖檔區塊（搖擺X專用）
+function createItemImagesSection(item) {
+    // 只有搖擺X分頁才顯示
+    if (!item.itemImage1 && !item.itemImage2 &&
+        !item.itemImage3 && !item.itemImage4) {
+        return '';
+    }
+
+    const items = [];
+
+    [item.itemImage1, item.itemImage2, item.itemImage3, item.itemImage4]
+        .forEach(itemStr => {
+            const parsed = parseItemImage(itemStr);
+            if (parsed) {
+                items.push(parsed);
+            }
+        });
+
+    if (items.length === 0) return '';
+
+    return `
+        <div class="item-images-section">
+            <div class="section-title">道具需求</div>
+            <div class="item-images-grid">
+                ${items.map(item => `
+                    <div class="item-image-box">
+                        <img src="${getImagePath(item.imageName)}" 
+                             alt="${item.imageName}" 
+                             class="item-image"
+                             onerror="tryAlternativeImageFormats(this, '${item.imageName}')">
+                        <div class="item-quantity">x ${item.quantity}</div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
 
 // 處理進化名稱點擊事件
 function setupEvoLinkClickHandlers() {
@@ -695,7 +716,7 @@ function loadAndDisplayIntro(sheetName) {
 
     // 讀取所有資料
     const sheetData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-    const content = processIntroData(sheetData);
+    const content = processIntroData(sheetData, sheet);  // 傳遞 sheet 參數以支援圖檔索引
 
     // 顯示介紹內容
     renderIntroContent(content);
@@ -1055,14 +1076,41 @@ function renderIntroContent(content) {
                     const td = document.createElement('td');
 
                     if (cellData) {
-                        let cellHtml = linkify(cellData.value); // 自動將文字網址轉連結
+                        const text = cellData.value;
 
-                        // 如果有 Excel 原生超連結，則包裹整個內容
-                        if (cellData.link) {
-                            cellHtml = '<a href="' + cellData.link + '" target="_blank" class="intro-link">' + cellHtml + '</a>';
+                        // 判斷是否為圖片路徑
+                        if (text.includes('/images') || text.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i)) {
+                            // 處理圖片路徑
+                            let imageValue = text;
+                            if (text.includes('images/')) {
+                                const parts = text.split('images/');
+                                if (parts.length > 1) {
+                                    imageValue = parts[parts.length - 1];
+                                }
+                            }
+
+                            // 建立圖片元素
+                            const img = document.createElement('img');
+                            img.src = getImagePath(imageValue);
+                            img.alt = imageValue;
+                            img.className = 'intro-table-image';
+                            img.style.maxWidth = '100px';
+                            img.style.maxHeight = '100px';
+                            img.onerror = function () {
+                                tryAlternativeImageFormats(this, imageValue);
+                            };
+                            td.appendChild(img);
+                        } else {
+                            // 一般文字處理
+                            let cellHtml = linkify(text); // 自動將文字網址轉連結
+
+                            // 如果有 Excel 原生超連結，則包裹整個內容
+                            if (cellData.link) {
+                                cellHtml = '<a href="' + cellData.link + '" target="_blank" class="intro-link">' + cellHtml + '</a>';
+                            }
+
+                            td.innerHTML = cellHtml;
                         }
-
-                        td.innerHTML = cellHtml;
                     } else {
                         td.textContent = '';
                     }
@@ -1080,7 +1128,9 @@ function renderIntroContent(content) {
             img.src = getImagePath(item.value);
             img.alt = '介紹圖片';
             img.className = 'intro-image';
-            img.onerror = function () { this.style.display = 'none'; };
+            img.onerror = function () {
+                tryAlternativeImageFormats(this, item.value);
+            };
 
             if (item.link) {
                 const a = document.createElement('a');
@@ -1221,17 +1271,26 @@ function addVersionFilter(data) {
         filterContainer.remove();
     }
 
+    // 從資料中提取所有版本（排除空白和重複）
+    const versions = new Set();
+    data.forEach(item => {
+        if (item.version && String(item.version).trim() !== '') {
+            versions.add(String(item.version).trim());
+        }
+    });
+
+    // 轉換為陣列並排序
+    const versionArray = Array.from(versions).sort();
+
+    // 如果沒有版本資訊，不顯示篩選器
+    if (versionArray.length === 0) {
+        return;
+    }
+
     // 建立篩選器容器
     filterContainer = document.createElement('div');
     filterContainer.id = 'versionFilterContainer';
     filterContainer.className = 'filter-container';
-
-    // 取得篩選選項
-    const filters = getVersionFilters();
-
-    if (filters.length === 0) {
-        return; // 沒有篩選選項，不顯示篩選器
-    }
 
     // 建立下拉選單
     const select = document.createElement('select');
@@ -1244,11 +1303,11 @@ function addVersionFilter(data) {
     allOption.textContent = '全部版本';
     select.appendChild(allOption);
 
-    // 新增篩選選項
-    filters.forEach(filter => {
+    // 新增版本選項
+    versionArray.forEach(version => {
         const option = document.createElement('option');
-        option.value = filter.text;
-        option.textContent = filter.text;
+        option.value = version;
+        option.textContent = version;
         select.appendChild(option);
     });
 
@@ -1323,7 +1382,7 @@ function restoreView(state) {
                 const sheet = currentWorkbook.Sheets[state.sheetName];
                 if (sheet) {
                     const sheetData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-                    const processedData = processDetailData(sheetData);
+                    const processedData = processDetailData(sheetData, state.sheetName);
                     displayDetailCards(processedData);
                     switchView('detail');
                 }
