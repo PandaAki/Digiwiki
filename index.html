@@ -14,8 +14,9 @@
         <header>
             <h1>🎮 對打機資料庫</h1>
             <div class="controls">
-                <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;">
-                <button id="loadBtn" class="btn-primary">選擇 Excel 檔案</button>
+                <!-- 隱藏手動上傳功能（GitHub 版本自動載入 JSON）-->
+                <!-- <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;"> -->
+                <!-- <button id="loadBtn" class="btn-primary">選擇 Excel 檔案</button> -->
                 <button id="backBtn" class="btn-secondary" style="display: none;">← 返回首頁</button>
                 <span id="status" class="status">準備就緒</span>
             </div>
@@ -41,7 +42,7 @@
         <div id="welcomeView" class="view-container">
             <div class="welcome-message">
                 <h2>歡迎使用對打機資料庫</h2>
-                <p>點擊「選擇 Excel 檔案」按鈕開始讀取 Excel 檔案</p>
+                <p>資料載入中，請稍候...</p>
             </div>
         </div>
     </div>
