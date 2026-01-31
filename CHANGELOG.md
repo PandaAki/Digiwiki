@@ -9,6 +9,29 @@
 - **[移除]** - 移除的功能
 - **[部署]** - 部署相關資訊
 
+
+---
+
+## [v1.0.4-github] - 2026-02-01
+
+### [修正]
+- **緊急修復：自動載入功能**
+  - 修復 GitHub Pages 自動載入 JSON 資料功能
+  - 加入 `autoLoadDefaultData()` 函式
+  - 修正圖片路徑為 `./images/`（GitHub Pages 適用）
+  - 修復因同步本機版本而覆蓋的自動載入邏輯
+
+### [技術細節]
+- 在 `DOMContentLoaded` 中呼叫 `autoLoadDefaultData()`
+- 自動載入 `./data/sample-data.json`
+- 轉換 JSON 為 workbook 格式
+- 完整的錯誤處理與狀態顯示
+
+### [問題說明]
+- v1.0.3-github 同步時，本機版本的 `script.js` 覆蓋了 GitHub 版本的自動載入功能
+- 導致網站顯示「資料載入中，請稍候...」但無法載入資料
+- 本次修復恢復了自動載入功能
+
 ---
 
 ## [v1.0.3-github] - 2026-02-01
