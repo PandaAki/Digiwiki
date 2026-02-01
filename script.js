@@ -1104,8 +1104,8 @@ function renderIntroContent(content) {
                             };
                             td.appendChild(img);
                         } else {
-                            // 一般文字處理
-                            let cellHtml = linkify(text); // 自動將文字網址轉連結
+                            // 一般文字處理（加入顏色代碼支援）
+                            let cellHtml = parseColorTags(linkify(text)); // 先處理連結，再處理顏色
 
                             // 如果有 Excel 原生超連結，則包裹整個內容
                             if (cellData.link) {
@@ -1152,12 +1152,18 @@ function renderIntroContent(content) {
             const p = document.createElement('p');
             p.className = 'intro-text';
 
-            let htmlContent = linkify(item.value);
+            // 處理顏色代碼和連結
+            p.innerHTML = parseColorTags(linkify(item.value));
+
             if (item.link) {
-                htmlContent = '<a href="' + item.link + '" target="_blank" class="intro-link">' + htmlContent + '</a>';
+                const a = document.createElement('a');
+                a.href = item.link;
+                a.target = '_blank';
+                a.innerHTML = p.innerHTML;
+                p.innerHTML = '';
+                p.appendChild(a);
             }
 
-            p.innerHTML = htmlContent;
             div.appendChild(p);
             container.appendChild(div);
         }
