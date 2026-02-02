@@ -35,9 +35,31 @@ try {
     workbook.SheetNames.forEach(sheetName => {
         const sheet = workbook.Sheets[sheetName];
         const sheetData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-        data[sheetName] = sheetData;
+
+        // 提取超連結
+        const links = {};
+        let hasLinks = false;
+
+        // 遍歷所有儲存格以尋找超連結
+        for (const cellAddress in sheet) {
+            if (cellAddress[0] === '!') continue; // 跳過特殊屬性
+
+            const cell = sheet[cellAddress];
+            if (cell.l && cell.l.Target) {
+                links[cellAddress] = cell.l.Target;
+                hasLinks = true;
+            }
+        }
+
+        // 儲存資料與連結
+        // 為了相容性，我們改用物件結構，但前端需要對應修改
+        data[sheetName] = {
+            data: sheetData,
+            links: hasLinks ? links : null
+        };
+
         totalRows += sheetData.length;
-        console.log(`   - ${sheetName}: ${sheetData.length} 列`);
+        console.log(`   - ${sheetName}: ${sheetData.length} 列${hasLinks ? ` (含連結)` : ''}`);
     });
 
     console.log('');

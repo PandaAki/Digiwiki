@@ -726,75 +726,48 @@ function loadAndDisplayIntro(sheetName) {
     switchView('intro');
 }
 
-// 處理介紹頁面資料
-function processIntroData(data) {
-    const content = [];
-
-    // 遍歷每一行
-    data.forEach(row => {
-        // 遍歷每一列
-        row.forEach(cell => {
-            if (cell && String(cell).trim() !== '') {
-                const text = String(cell).trim();
-
-                // 判斷是否為圖片
-                if (text.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i)) {
-                    content.push({ type: 'image', value: text });
-                } else {
-                    content.push({ type: 'text', value: text });
-                }
-            }
-        });
-    });
-
-    return content;
-}
-
-// 渲染介紹內容
-function renderIntroContent(content) {
-    const container = document.getElementById('introContainer');
-    container.innerHTML = '';
-
-    if (content.length === 0) {
-        container.innerHTML = '<div class="no-data">沒有找到任何介紹內容</div>';
-        return;
-    }
-
-    content.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'intro-item';
-
-        if (item.type === 'image') {
-            const img = document.createElement('img');
-            img.src = getImagePath(item.value);
-            img.alt = '介紹圖片';
-            img.className = 'intro-image';
-            img.onerror = function () {
-                this.style.display = 'none'; // 圖片載入失敗則隱藏
-            };
-            div.appendChild(img);
-        } else {
-            const p = document.createElement('p');
-            p.className = 'intro-text';
-            p.textContent = item.value;
-            div.appendChild(p);
-        }
-
-        container.appendChild(div);
-    });
-}
-
-// 處理介紹頁面資料 (升級版: 支援表格)
-function processIntroData(data) {
+// 處理介紹頁面資料 (升級版: 支援表格與超連結)
+function processIntroData(data, sheet) {
     const content = [];
     let currentTable = [];
 
-    data.forEach(row => {
-        // 過濾掉完全空白的行
-        const nonEmptyCells = row.filter(cell => cell !== undefined && cell !== null && String(cell).trim() !== '');
+    data.forEach((row, rowIndex) => {
+        // 過濾掉完全空白的行，但保留原來的 row 物件以便取得 cell 資料
+        // 因為 sheet_to_json(header:1) 回傳的是數值陣列，我們需要同時查找 sheet 物件中的 cell
+
+        let hasContent = false;
+        const processedRow = [];
+
+        row.forEach((cellValue, colIndex) => {
+            if (cellValue !== undefined && cellValue !== null && String(cellValue).trim() !== '') {
+                hasContent = true;
+
+                // 取得 Excel 儲存格位址 (例如 A1, B2)
+                const cellAddress = XLSX.utils.encode_cell({ c: colIndex, r: rowIndex });
+                const cellObject = sheet ? sheet[cellAddress] : null;
+
+                // 檢查是否有 Excel 超連結
+                let linkTarget = null;
+                if (cellObject && cellObject.l && cellObject.l.Target) {
+                    linkTarget = cellObject.l.Target;
+                }
+
+                processedRow.push({
+                    value: String(cellValue).trim(),
+                    link: linkTarget
+                });
+            } else {
+                // 空白儲存格也佔位
+                processedRow.push(null);
+            }
+        });
+
+        // 下面的邏輯判斷是否為表格行
+        // 為了簡單起見，我們計算非空單元格的數量
+        const nonEmptyCells = processedRow.filter(cell => cell !== null);
 
         if (nonEmptyCells.length === 0) {
-            // 空行，如果之前有表格正在累積，先結束該表格
+            // 空行，結束目前表格
             if (currentTable.length > 0) {
                 content.push({ type: 'table', rows: currentTable });
                 currentTable = [];
@@ -802,30 +775,43 @@ function processIntroData(data) {
             return;
         }
 
-        // 判斷是否為表格行 (超過1個欄位有資料)
-        // 或者雖然只有1個欄位，但目前正在構建表格(且該欄位不是圖片) -> 這裡簡單點，只看是否多欄
         if (nonEmptyCells.length > 1) {
-            currentTable.push(row);
+            // 多欄位 -> 視為表格行
+            // 需要過濾掉尾部的 null，但保留中間的 null 以維持對齊? 
+            // 這裡簡單處理：直接存整個 processedRow，渲染時處理 null
+            currentTable.push(processedRow);
         } else {
-            // 單欄內容
-            // 先結束之前的表格
+            // 單欄位
             if (currentTable.length > 0) {
                 content.push({ type: 'table', rows: currentTable });
                 currentTable = [];
             }
 
-            // 處理單一內容
-            const text = String(nonEmptyCells[0]).trim();
+            const item = nonEmptyCells[0]; // 取得該行唯一的資料
+            const text = item.value;
+
             // 判斷是否為圖片
-            if (text.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i)) {
-                content.push({ type: 'image', value: text });
+            // 規則: 包含 /images 或 常見圖片副檔名
+            if (text.includes('/images') || text.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i)) {
+                let imageValue = text;
+
+                // 如果包含 /images，則移除該路徑前綴，只保留檔名
+                // 這樣 renderIntroContent 接手後，會再自動加上 IMAGE_BASE_PATH (../Digimonwiki/images/)
+                // 達成使用者的需求: 顯示 H:\Antigravity make\Digimonwiki\images 下的檔案
+                if (text.includes('images/')) {
+                    const parts = text.split('images/');
+                    if (parts.length > 1) {
+                        imageValue = parts[parts.length - 1]; // 取得 images/ 後面的部分
+                    }
+                }
+
+                content.push({ type: 'image', value: imageValue, link: item.link, original: text });
             } else {
-                content.push({ type: 'text', value: text });
+                content.push({ type: 'text', value: text, link: item.link });
             }
         }
     });
 
-    // 處理最後殘留的表格
     if (currentTable.length > 0) {
         content.push({ type: 'table', rows: currentTable });
     }
@@ -954,97 +940,7 @@ function loadAndDisplayIntro(sheetName) {
 }
 
 // 處理介紹頁面資料 (升級版: 支援表格與超連結)
-function processIntroData(data, sheet) {
-    const content = [];
-    let currentTable = [];
 
-    data.forEach((row, rowIndex) => {
-        // 過濾掉完全空白的行，但保留原來的 row 物件以便取得 cell 資料
-        // 因為 sheet_to_json(header:1) 回傳的是數值陣列，我們需要同時查找 sheet 物件中的 cell
-
-        let hasContent = false;
-        const processedRow = [];
-
-        row.forEach((cellValue, colIndex) => {
-            if (cellValue !== undefined && cellValue !== null && String(cellValue).trim() !== '') {
-                hasContent = true;
-
-                // 取得 Excel 儲存格位址 (例如 A1, B2)
-                const cellAddress = XLSX.utils.encode_cell({ c: colIndex, r: rowIndex });
-                const cellObject = sheet ? sheet[cellAddress] : null;
-
-                // 檢查是否有 Excel 超連結
-                let linkTarget = null;
-                if (cellObject && cellObject.l && cellObject.l.Target) {
-                    linkTarget = cellObject.l.Target;
-                }
-
-                processedRow.push({
-                    value: String(cellValue).trim(),
-                    link: linkTarget
-                });
-            } else {
-                // 空白儲存格也佔位
-                processedRow.push(null);
-            }
-        });
-
-        // 下面的邏輯判斷是否為表格行
-        // 為了簡單起見，我們計算非空單元格的數量
-        const nonEmptyCells = processedRow.filter(cell => cell !== null);
-
-        if (nonEmptyCells.length === 0) {
-            // 空行，結束目前表格
-            if (currentTable.length > 0) {
-                content.push({ type: 'table', rows: currentTable });
-                currentTable = [];
-            }
-            return;
-        }
-
-        if (nonEmptyCells.length > 1) {
-            // 多欄位 -> 視為表格行
-            // 需要過濾掉尾部的 null，但保留中間的 null 以維持對齊? 
-            // 這裡簡單處理：直接存整個 processedRow，渲染時處理 null
-            currentTable.push(processedRow);
-        } else {
-            // 單欄位
-            if (currentTable.length > 0) {
-                content.push({ type: 'table', rows: currentTable });
-                currentTable = [];
-            }
-
-            const item = nonEmptyCells[0]; // 取得該行唯一的資料
-            const text = item.value;
-
-            // 判斷是否為圖片
-            // 規則: 包含 /images 或 常見圖片副檔名
-            if (text.includes('/images') || text.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i)) {
-                let imageValue = text;
-
-                // 如果包含 /images，則移除該路徑前綴，只保留檔名
-                // 這樣 renderIntroContent 接手後，會再自動加上 IMAGE_BASE_PATH (../Digimonwiki/images/)
-                // 達成使用者的需求: 顯示 H:\Antigravity make\Digimonwiki\images 下的檔案
-                if (text.includes('images/')) {
-                    const parts = text.split('images/');
-                    if (parts.length > 1) {
-                        imageValue = parts[parts.length - 1]; // 取得 images/ 後面的部分
-                    }
-                }
-
-                content.push({ type: 'image', value: imageValue, link: item.link, original: text });
-            } else {
-                content.push({ type: 'text', value: text, link: item.link });
-            }
-        }
-    });
-
-    if (currentTable.length > 0) {
-        content.push({ type: 'table', rows: currentTable });
-    }
-
-    return content;
-}
 
 // 渲染介紹內容 (升級版: 支援表格與超連結)
 function renderIntroContent(content) {
@@ -1455,50 +1351,74 @@ document.addEventListener('DOMContentLoaded', () => {
 // ===== GitHub Pages 專用：自動載入 JSON 資料 =====
 async function autoLoadDefaultData() {
     const statusEl = document.getElementById('status');
-    
+
     try {
         statusEl.textContent = '資料載入中，請稍候...';
         statusEl.style.background = '#fef5e7';
         statusEl.style.color = '#7d6608';
-        
+
         // 載入 JSON 檔案
         const response = await fetch('./data/sample-data.json');
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const jsonData = await response.json();
-        
+
         // 轉換 JSON 為 workbook 格式
         const workbook = {
             SheetNames: [],
             Sheets: {}
         };
-        
+
         for (const sheetName in jsonData) {
             workbook.SheetNames.push(sheetName);
-            const data = jsonData[sheetName];
-            workbook.Sheets[sheetName] = XLSX.utils.aoa_to_sheet(data);
+
+            const sheetItem = jsonData[sheetName];
+            let sheetData = [];
+            let links = null;
+
+            // 判斷資料格式：舊版直接是陣列，新版是物件 { data, links }
+            if (Array.isArray(sheetItem)) {
+                sheetData = sheetItem;
+            } else if (sheetItem && sheetItem.data) {
+                sheetData = sheetItem.data;
+                links = sheetItem.links;
+            }
+
+            const sheet = XLSX.utils.aoa_to_sheet(sheetData);
+
+            // 如果有超連結，還原回 sheet 物件
+            if (links) {
+                for (const cellAddr in links) {
+                    if (sheet[cellAddr]) {
+                        if (!sheet[cellAddr].l) sheet[cellAddr].l = {};
+                        sheet[cellAddr].l.Target = links[cellAddr];
+                    }
+                }
+            }
+
+            workbook.Sheets[sheetName] = sheet;
         }
-        
+
         currentWorkbook = workbook;
-        
+
         // 更新網頁標題
         updatePageTitle(currentWorkbook);
-        
+
         // 顯示首頁
         showHomeView();
-        
+
         statusEl.style.background = '#d4edda';
         statusEl.style.color = '#155724';
         statusEl.textContent = `已自動載入資料（${workbook.SheetNames.length} 個工作表）`;
-        
+
     } catch (error) {
         console.error('自動載入 JSON 失敗:', error);
         statusEl.textContent = '資料載入失敗，請檢查 data/sample-data.json 檔案';
         statusEl.style.background = '#f8d7da';
         statusEl.style.color = '#721c24';
-        
+
         // 顯示歡迎畫面（允許手動上傳 Excel 檔案）
         switchView('welcome');
     }
