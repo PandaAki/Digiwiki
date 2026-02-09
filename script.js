@@ -1475,26 +1475,26 @@ document.addEventListener('DOMContentLoaded', () => {
 // ===== GitHub Pages 專用：自動載入 JSON 資料 =====
 async function autoLoadDefaultData() {
     const statusEl = document.getElementById('status');
-    
+
     try {
         statusEl.textContent = '資料載入中，請稍候...';
-        
+
         const response = await fetch('./data/sample-data.json');
         if (!response.ok) {
             throw new Error('無法載入資料檔案');
         }
-        
-        const jsonData = response.json();
-        
+
+        const jsonData = await response.json();
+
         // 建立 workbook 物件
         const workbook = {
             SheetNames: [],
             Sheets: {}
         };
-        
+
         for (const sheetName in jsonData) {
             workbook.SheetNames.push(sheetName);
-            
+
             const sheetItem = jsonData[sheetName];
             let sheetData = [];
             let links = null;
@@ -1508,7 +1508,7 @@ async function autoLoadDefaultData() {
             }
 
             const sheet = XLSX.utils.aoa_to_sheet(sheetData);
-            
+
             // 如果有超連結，還原回 sheet 物件
             if (links) {
                 for (const cellAddr in links) {
@@ -1521,14 +1521,14 @@ async function autoLoadDefaultData() {
 
             workbook.Sheets[sheetName] = sheet;
         }
-        
+
         currentWorkbook = workbook;
         statusEl.textContent = '資料載入完成！';
-        
+
         // 顯示首頁索引
         displayHomeIndex();
         switchView('home');
-        
+
     } catch (error) {
         console.error('載入資料失敗:', error);
         statusEl.textContent = '資料載入失敗，請重新整理頁面';
