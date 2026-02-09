@@ -1625,8 +1625,11 @@ async function autoLoadDefaultData() {
             // \u586b\u5165\u8cc7\u6599
             sheetData.forEach((row, rowIndex) => {
                 row.forEach((cellValue, colIndex) => {
-                    // 跳過 null 和 undefined 值（模擬 XLSX 行為）
-                    if (cellValue === null || cellValue === undefined) return;
+                    // 檢查是否有超連結
+                    const hasLink = sheetLinks && sheetLinks[rowIndex] && sheetLinks[rowIndex][colIndex];
+
+                    // 跳過 null 值，除非有超連結（模擬 XLSX 行為）
+                    if ((cellValue === null || cellValue === undefined) && !hasLink) return;
 
                     const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex });
                     // 判斷資料類型
@@ -1635,8 +1638,8 @@ async function autoLoadDefaultData() {
                     else if (typeof cellValue === 'boolean') cellType = 'b';
                     sheet[cellAddress] = { v: cellValue, t: cellType };
 
-                    // \u5982\u679c\u6709\u9023\u7d50\u8cc7\u6599\uff0c\u52a0\u5165 hyperlink
-                    if (sheetLinks && sheetLinks[rowIndex] && sheetLinks[rowIndex][colIndex]) {
+                    // 如果有連結資料，加入 hyperlink
+                    if (hasLink) {
                         sheet[cellAddress].l = { Target: sheetLinks[rowIndex][colIndex] };
                     }
                 });
