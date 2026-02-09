@@ -1626,7 +1626,11 @@ async function autoLoadDefaultData() {
             sheetData.forEach((row, rowIndex) => {
                 row.forEach((cellValue, colIndex) => {
                     const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex });
-                    sheet[cellAddress] = { v: cellValue, t: 's' };
+                    // 判斷資料類型
+                    let cellType = 's';
+                    if (typeof cellValue === 'number') cellType = 'n';
+                    else if (typeof cellValue === 'boolean') cellType = 'b';
+                    sheet[cellAddress] = { v: cellValue, t: cellType };
 
                     // \u5982\u679c\u6709\u9023\u7d50\u8cc7\u6599\uff0c\u52a0\u5165 hyperlink
                     if (sheetLinks && sheetLinks[rowIndex] && sheetLinks[rowIndex][colIndex]) {
