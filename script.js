@@ -1640,7 +1640,7 @@ async function autoLoadDefaultData() {
 
                     // 如果有連結資料，加入 hyperlink
                     if (hasLink) {
-                        sheet[cellAddress].l = { Target: sheetLinks[rowIndex][colIndex] };
+                        sheet[cellAddress].l = { Target: sheetLinks[cellAddress] };
                     }
                 });
             });
