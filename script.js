@@ -1606,34 +1606,35 @@ async function autoLoadDefaultData() {
             throw new Error('Failed to load data');
         }
         const jsonData = await response.json();
-        
-        // \u8f49\u63db JSON \u683c\u5f0f\u70ba workbook \u683c\u5f0f
+
+        // 轉換 JSON 格式為 workbook 格式
         currentWorkbook = {
-            SheetNames: Object.keys(jsonData.data),
+            SheetNames: Object.keys(jsonData),
             Sheets: {}
         };
-        
-        // \u8655\u7406\u6bcf\u500b\u5de5\u4f5c\u8868
-        Object.keys(jsonData.data).forEach(sheetName => {
-            const sheetData = jsonData.data[sheetName];
-            const sheetLinks = jsonData.links ? jsonData.links[sheetName] : null;
-            
+
+        // 處理每個工作表
+        Object.keys(jsonData).forEach(sheetName => {
+            const sheetInfo = jsonData[sheetName];
+            const sheetData = sheetInfo.data || sheetInfo;
+            const sheetLinks = sheetInfo.links || null;
+
             // \u5efa\u7acb sheet \u7269\u4ef6
             const sheet = {};
-            
+
             // \u586b\u5165\u8cc7\u6599
             sheetData.forEach((row, rowIndex) => {
                 row.forEach((cellValue, colIndex) => {
                     const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex });
                     sheet[cellAddress] = { v: cellValue, t: 's' };
-                    
+
                     // \u5982\u679c\u6709\u9023\u7d50\u8cc7\u6599\uff0c\u52a0\u5165 hyperlink
                     if (sheetLinks && sheetLinks[rowIndex] && sheetLinks[rowIndex][colIndex]) {
                         sheet[cellAddress].l = { Target: sheetLinks[rowIndex][colIndex] };
                     }
                 });
             });
-            
+
             // \u8a2d\u5b9a range
             const maxRow = sheetData.length - 1;
             const maxCol = Math.max(...sheetData.map(row => row.length)) - 1;
@@ -1641,15 +1642,15 @@ async function autoLoadDefaultData() {
                 s: { r: 0, c: 0 },
                 e: { r: maxRow, c: maxCol }
             });
-            
+
             currentWorkbook.Sheets[sheetName] = sheet;
         });
-        
+
         // \u986f\u793a\u9996\u9801
         showHomeView();
     } catch (error) {
         console.error('Error loading data:', error);
-        document.getElementById('welcomeView').innerHTML = 
+        document.getElementById('welcomeView').innerHTML =
             '\u003ch2\u003e\u8cc7\u6599\u8f09\u5165\u5931\u6557\u003c/h2\u003e\u003cp\u003e\u7121\u6cd5\u8f09\u5165\u9810\u8a2d\u8cc7\u6599\uff0c\u8acb\u6aa2\u67e5 data/sample-data.json \u662f\u5426\u5b58\u5728\u3002\u003c/p\u003e';
     }
 }
