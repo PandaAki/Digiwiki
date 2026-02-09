@@ -1625,6 +1625,9 @@ async function autoLoadDefaultData() {
             // \u586b\u5165\u8cc7\u6599
             sheetData.forEach((row, rowIndex) => {
                 row.forEach((cellValue, colIndex) => {
+                    // 跳過 null 和 undefined 值（模擬 XLSX 行為）
+                    if (cellValue === null || cellValue === undefined) return;
+
                     const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex });
                     // 判斷資料類型
                     let cellType = 's';
