@@ -1625,13 +1625,14 @@ async function autoLoadDefaultData() {
             // \u586b\u5165\u8cc7\u6599
             sheetData.forEach((row, rowIndex) => {
                 row.forEach((cellValue, colIndex) => {
-                    // 檢查是否有超連結
-                    const hasLink = sheetLinks && sheetLinks[rowIndex] && sheetLinks[rowIndex][colIndex];
+                    const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex });
+
+                    // 檢查是否有超連結（使用 cellAddress 格式）
+                    const hasLink = sheetLinks && sheetLinks[cellAddress];
 
                     // 跳過 null 值，除非有超連結（模擬 XLSX 行為）
                     if ((cellValue === null || cellValue === undefined) && !hasLink) return;
 
-                    const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex });
                     // 判斷資料類型
                     let cellType = 's';
                     if (typeof cellValue === 'number') cellType = 'n';
