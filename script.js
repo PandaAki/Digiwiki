@@ -1525,8 +1525,8 @@ async function autoLoadDefaultData() {
         currentWorkbook = workbook;
         statusEl.textContent = '資料載入完成！';
 
-        // 顯示首頁索引
-        displayHomeIndex();
+        // 顯示首頁
+        showHomeView();
         switchView('home');
 
     } catch (error) {
