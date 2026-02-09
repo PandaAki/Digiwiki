@@ -268,14 +268,23 @@ function processDetailData(data, sheetName) {
             evo6: row[31] || ''            // AF(32): 進化6
         };
 
-        // 判斷是否為搖擺X或加速機分頁（版本欄位在第 37 欄）
-        if (sheetName === '搖擺X' || sheetName === '加速機') {
+        // 判斷是否為搖擺X分頁（版本欄位在第 37 欄）
+        if (sheetName === '搖擺X') {
             // 新增圖檔索引欄位 33-36
             item.itemImage1 = row[32] || '';  // AG(33): 圖檔索引1
             item.itemImage2 = row[33] || '';  // AH(34): 圖檔索引2
             item.itemImage3 = row[34] || '';  // AI(35): 圖檔索引3
             item.itemImage4 = row[35] || '';  // AJ(36): 圖檔索引4
             item.version = row[36] || '';     // AK(37): 版本
+        } else if (sheetName === '加速機') {
+            // 加速機分頁：進化物品組欄位 33-38，版本在第 39 欄
+            item.evoItems1 = row[32] || '';   // AG(33): 進化1物品組
+            item.evoItems2 = row[33] || '';   // AH(34): 進化2物品組
+            item.evoItems3 = row[34] || '';   // AI(35): 進化3物品組
+            item.evoItems4 = row[35] || '';   // AJ(36): 進化4物品組
+            item.evoItems5 = row[36] || '';   // AK(37): 進化5物品組
+            item.evoItems6 = row[37] || '';   // AL(38): 進化6物品組
+            item.version = row[38] || '';     // AM(39): 版本
         } else {
             // 其他分頁維持原本的版本欄位位置
             item.version = row[32] || '';     // AG(33): 版本
@@ -305,34 +314,76 @@ function parseItemImage(itemImageStr) {
     }
 
     const parts = itemImageStr.split(';');
+
+    // 容錯處理：如果沒有分號，可能是格式錯誤，跳過
     if (parts.length !== 2) {
+        console.warn(`物品格式錯誤，已跳過: "${itemImageStr}"`);
         return null;
     }
 
     const imageName = parts[0].trim();
     const quantityStr = parts[1].trim();
 
-    // 檢查是否為區間格式（例如 "1-5"）
-    if (quantityStr.includes('-')) {
-        const rangeParts = quantityStr.split('-');
+    // 檢查圖片名稱和數量是否為空
+    if (!imageName || !quantityStr) {
+        console.warn(`物品資料不完整，已跳過: "${itemImageStr}"`);
+        return null;
+    }
+
+    // 檢查是否為區間格式（例如 "1-5" 或 "0~5"）
+    if (quantityStr.includes('-') || quantityStr.includes('~')) {
+        const separator = quantityStr.includes('~') ? '~' : '-';
+        const rangeParts = quantityStr.split(separator);
         if (rangeParts.length === 2) {
             const min = rangeParts[0].trim();
             const max = rangeParts[1].trim();
-            return {
-                imageName: imageName,
-                quantity: parseInt(min) || 1,  // 保留數值供其他用途
-                displayQuantity: `${min}~${max}`  // 顯示用的區間格式
-            };
+
+            // 檢查區間是否有效（允許 0 作為最小值）
+            if (min !== '' && max !== '' && !isNaN(parseInt(min)) && !isNaN(parseInt(max))) {
+                return {
+                    imageName: imageName,
+                    quantity: parseInt(min),
+                    displayQuantity: `${min}~${max}`
+                };
+            }
         }
     }
 
     // 一般數量格式
+    const quantity = parseInt(quantityStr);
+
+    // 檢查數量是否有效（允許 0）
+    if (isNaN(quantity) || quantity < 0) {
+        console.warn(`物品數量無效，已跳過: "${itemImageStr}" (數量: ${quantityStr})`);
+        return null;
+    }
+
     return {
         imageName: imageName,
-        quantity: parseInt(quantityStr) || 1,
-        displayQuantity: quantityStr  // 直接使用原始數量
+        quantity: quantity,
+        displayQuantity: quantityStr
     };
 }
+
+// 解析物品組格式（物品1;數量|物品2;數量|...）
+function parseItemGroup(itemGroupStr) {
+    if (!itemGroupStr || itemGroupStr.trim() === '') {
+        return [];
+    }
+
+    const items = [];
+    const itemParts = itemGroupStr.split('|');
+
+    itemParts.forEach(itemStr => {
+        const parsed = parseItemImage(itemStr.trim());
+        if (parsed) {
+            items.push(parsed);
+        }
+    });
+
+    return items;
+}
+
 
 
 // 顯示詳細資料卡片
@@ -668,9 +719,67 @@ function createImagesSection(item) {
     `;
 }
 
-// 建立道具圖檔區塊（搖擺X專用）
+// 建立道具圖檔區塊（搖擺X和加速機專用）
 function createItemImagesSection(item) {
-    // 只有搖擺X分頁才顯示
+    // 加速機分頁：進化路線分組顯示
+    if (item.evoItems1 || item.evoItems2 || item.evoItems3 ||
+        item.evoItems4 || item.evoItems5 || item.evoItems6) {
+
+        const evolutionPaths = [];
+
+        // 處理每個進化路線
+        [
+            { name: item.evo1, items: item.evoItems1 },
+            { name: item.evo2, items: item.evoItems2 },
+            { name: item.evo3, items: item.evoItems3 },
+            { name: item.evo4, items: item.evoItems4 },
+            { name: item.evo5, items: item.evoItems5 },
+            { name: item.evo6, items: item.evoItems6 }
+        ].forEach(evo => {
+            if (evo.name && evo.items) {
+                const parsedItems = parseItemGroup(evo.items);
+                if (parsedItems.length > 0) {
+                    evolutionPaths.push({
+                        name: evo.name,
+                        items: parsedItems
+                    });
+                }
+            }
+        });
+
+        if (evolutionPaths.length === 0) return '';
+
+        return `
+            <div class="evolution-paths-section collapsed">
+                <div class="section-title evolution-header">
+                    <span>進化需求</span>
+                    <button class="collapse-btn" onclick="toggleEvolutionPaths(this)">
+                        <span class="collapse-icon">▶</span>
+                    </button>
+                </div>
+                <div class="evolution-paths-content">
+                    ${evolutionPaths.map(path => `
+                        <div class="evolution-path">
+                            <div class="evolution-target">${item._nameMap && item._nameMap[path.name] ? item._nameMap[path.name] : path.name}</div>
+                            <div class="evolution-items">
+                                ${path.items.map(item => `
+                                    <div class="evolution-item">
+                                        <img src="${getImagePath(item.imageName)}" 
+                                             alt="${item.imageName}" 
+                                             class="item-image"
+                                             onerror="tryAlternativeImageFormats(this, '${item.imageName}')">
+                                        <div class="item-quantity">x ${item.displayQuantity}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    // 搖擺X分頁：原本的道具需求顯示
     if (!item.itemImage1 && !item.itemImage2 &&
         !item.itemImage3 && !item.itemImage4) {
         return '';
@@ -1471,66 +1580,76 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+// 切換進化路線折疊狀態
+function toggleEvolutionPaths(button) {
+    const section = button.closest('.evolution-paths-section');
+    const content = section.querySelector('.evolution-paths-content');
+    const icon = button.querySelector('.collapse-icon');
 
-// ===== GitHub Pages 專用：自動載入 JSON 資料 =====
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        icon.textContent = '▼';
+        section.classList.remove('collapsed');
+    } else {
+        content.style.display = 'none';
+        icon.textContent = '▶';
+        section.classList.add('collapsed');
+    }
+}
+
+
+// \u81ea\u52d5\u8f09\u5165\u9810\u8a2d JSON \u8cc7\u6599 (GitHub Pages \u7248\u672c)
 async function autoLoadDefaultData() {
-    const statusEl = document.getElementById('status');
-
     try {
-        statusEl.textContent = '資料載入中，請稍候...';
-
-        const response = await fetch('./data/sample-data.json');
+        const response = await fetch('data/sample-data.json');
         if (!response.ok) {
-            throw new Error('無法載入資料檔案');
+            throw new Error('Failed to load data');
         }
-
         const jsonData = await response.json();
-
-        // 建立 workbook 物件
-        const workbook = {
-            SheetNames: [],
+        
+        // \u8f49\u63db JSON \u683c\u5f0f\u70ba workbook \u683c\u5f0f
+        currentWorkbook = {
+            SheetNames: Object.keys(jsonData.data),
             Sheets: {}
         };
-
-        for (const sheetName in jsonData) {
-            workbook.SheetNames.push(sheetName);
-
-            const sheetItem = jsonData[sheetName];
-            let sheetData = [];
-            let links = null;
-
-            // 判斷資料格式：舊版直接是陣列，新版是物件 { data, links }
-            if (Array.isArray(sheetItem)) {
-                sheetData = sheetItem;
-            } else if (sheetItem && sheetItem.data) {
-                sheetData = sheetItem.data;
-                links = sheetItem.links;
-            }
-
-            const sheet = XLSX.utils.aoa_to_sheet(sheetData);
-
-            // 如果有超連結，還原回 sheet 物件
-            if (links) {
-                for (const cellAddr in links) {
-                    if (sheet[cellAddr]) {
-                        if (!sheet[cellAddr].l) sheet[cellAddr].l = {};
-                        sheet[cellAddr].l.Target = links[cellAddr];
+        
+        // \u8655\u7406\u6bcf\u500b\u5de5\u4f5c\u8868
+        Object.keys(jsonData.data).forEach(sheetName => {
+            const sheetData = jsonData.data[sheetName];
+            const sheetLinks = jsonData.links ? jsonData.links[sheetName] : null;
+            
+            // \u5efa\u7acb sheet \u7269\u4ef6
+            const sheet = {};
+            
+            // \u586b\u5165\u8cc7\u6599
+            sheetData.forEach((row, rowIndex) => {
+                row.forEach((cellValue, colIndex) => {
+                    const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex });
+                    sheet[cellAddress] = { v: cellValue, t: 's' };
+                    
+                    // \u5982\u679c\u6709\u9023\u7d50\u8cc7\u6599\uff0c\u52a0\u5165 hyperlink
+                    if (sheetLinks && sheetLinks[rowIndex] && sheetLinks[rowIndex][colIndex]) {
+                        sheet[cellAddress].l = { Target: sheetLinks[rowIndex][colIndex] };
                     }
-                }
-            }
-
-            workbook.Sheets[sheetName] = sheet;
-        }
-
-        currentWorkbook = workbook;
-        statusEl.textContent = '資料載入完成！';
-
-        // 顯示首頁
+                });
+            });
+            
+            // \u8a2d\u5b9a range
+            const maxRow = sheetData.length - 1;
+            const maxCol = Math.max(...sheetData.map(row => row.length)) - 1;
+            sheet['!ref'] = XLSX.utils.encode_range({
+                s: { r: 0, c: 0 },
+                e: { r: maxRow, c: maxCol }
+            });
+            
+            currentWorkbook.Sheets[sheetName] = sheet;
+        });
+        
+        // \u986f\u793a\u9996\u9801
         showHomeView();
-        switchView('home');
-
     } catch (error) {
-        console.error('載入資料失敗:', error);
-        statusEl.textContent = '資料載入失敗，請重新整理頁面';
+        console.error('Error loading data:', error);
+        document.getElementById('welcomeView').innerHTML = 
+            '\u003ch2\u003e\u8cc7\u6599\u8f09\u5165\u5931\u6557\u003c/h2\u003e\u003cp\u003e\u7121\u6cd5\u8f09\u5165\u9810\u8a2d\u8cc7\u6599\uff0c\u8acb\u6aa2\u67e5 data/sample-data.json \u662f\u5426\u5b58\u5728\u3002\u003c/p\u003e';
     }
 }
