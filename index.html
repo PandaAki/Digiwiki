@@ -4,7 +4,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>對打機資料庫</title>
+
+    <!-- 基本 SEO -->
+    <title>數碼寶貝 對打機資料庫 | Digimon Pendulum 攻略查詢</title>
+    <meta name="description" content="數碼寶貝對打機（Digimon Pendulum）完整資料庫，收錄超超代、搖擺X、加速機等各版本怪獸數據、進化條件、進化需求、技能資訊，方便查詢與攻略參考。">
+    <meta name="keywords" content="數碼寶貝, 對打機, Digimon, Pendulum, 超超代, 搖擺X, 加速機, 進化, 攻略, 資料庫, 怪獸">
+    <meta name="author" content="Digiwiki">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph（Facebook / Line 分享預覽） -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="數碼寶貝 對打機資料庫">
+    <meta property="og:description" content="收錄超超代、搖擺X、加速機各版本怪獸數據、進化條件與攻略資訊。">
+    <meta property="og:locale" content="zh_TW">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="數碼寶貝 對打機資料庫">
+    <meta name="twitter:description" content="收錄超超代、搖擺X、加速機各版本怪獸數據、進化條件與攻略資訊。">
+
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -46,6 +64,12 @@
             </div>
         </div>
     </div>
+
+    <!-- 浮動返回上一個位置按鈕 -->
+    <button id="backFloatBtn" class="back-float-btn" onclick="goBackToPrevScroll()" title="返回上一個位置" style="display: none;">
+        <span class="back-float-icon">↩</span>
+        <span class="back-float-label">返回</span>
+    </button>
 
     <script src="script.js"></script>
 </body>

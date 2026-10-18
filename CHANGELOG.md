@@ -11,6 +11,21 @@
 
 ---
 
+## [v1.0.7-github] - 2026-10-18
+
+### [新增]
+- **SEO 優化與搜尋引擎配置**：
+  - 加入完整 SEO meta 標籤（title, description, keywords, Open Graph, Twitter Card）
+  - 新增 `robots.txt` 允許搜尋引擎抓取並指引至 sitemap
+  - 新增 `sitemap.xml` 網站地圖
+- **頂部列固定**：header 設定 `position: sticky`，頁面捲動時固定置頂
+- **浮動返回按鈕**：右下角新增「↩ 返回」按鈕，點擊進化連結後顯示，可退回上一捲動位置（支援多層堆疊返回）
+
+### [修正]
+- **進化需求折疊功能**：修正初次點擊需要點兩下才能展開的問題（改以 `classList.contains('collapsed')` 判斷）
+
+---
+
 ## [v1.0.6-github] - 2026-02-10
 
 ### [新增]

@@ -1,4 +1,4 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
 
 * {
     margin: 0;
@@ -27,6 +27,9 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 
 header h1 {
@@ -783,4 +786,46 @@ header h1 {
 
 .evolution-paths-section.collapsed .evolution-paths-content {
     display: none;
+}
+
+/* ===== 浮動返回按鈕 ===== */
+.back-float-btn {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.5);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.back-float-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 24px rgba(102, 126, 234, 0.7);
+}
+
+.back-float-btn:active {
+    transform: scale(0.96);
+}
+
+.back-float-icon {
+    font-size: 22px;
+    line-height: 1;
+}
+
+.back-float-label {
+    font-size: 10px;
+    line-height: 1;
+    letter-spacing: 0.5px;
 }

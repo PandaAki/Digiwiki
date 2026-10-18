@@ -1,9 +1,10 @@
-﻿// 設定圖片基礎路徑 (GitHub Pages 版本)
+// 設定圖片基礎路徑 (GitHub Pages 版本)
 const IMAGE_BASE_PATH = './images/';
 
 // 全域變數
 let currentWorkbook = null;
 let currentView = 'welcome'; // 'welcome', 'home', 'detail'
+let scrollHistory = []; // 捲動位置歷史紀錄（用於返回上一個位置）
 
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
@@ -822,6 +823,10 @@ function setupEvoLinkClickHandlers() {
             const targetId = this.getAttribute('data-target');
             const targetCard = document.getElementById(targetId);
             if (targetCard) {
+                // 記錄目前捲動位置到歷史紀錄
+                scrollHistory.push(window.scrollY);
+                updateBackFloatBtn();
+
                 targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 // 添加高亮效果
                 targetCard.style.transition = 'all 0.3s ease';
@@ -832,6 +837,21 @@ function setupEvoLinkClickHandlers() {
             }
         });
     });
+}
+
+// 更新浮動返回按鈕顯示狀態
+function updateBackFloatBtn() {
+    const btn = document.getElementById('backFloatBtn');
+    if (!btn) return;
+    btn.style.display = scrollHistory.length > 0 ? 'flex' : 'none';
+}
+
+// 返回上一個捲動位置
+function goBackToPrevScroll() {
+    if (scrollHistory.length === 0) return;
+    const prevY = scrollHistory.pop();
+    window.scrollTo({ top: prevY, behavior: 'smooth' });
+    updateBackFloatBtn();
 }
 
 // 載入並顯示介紹頁面
@@ -1586,7 +1606,8 @@ function toggleEvolutionPaths(button) {
     const content = section.querySelector('.evolution-paths-content');
     const icon = button.querySelector('.collapse-icon');
 
-    if (content.style.display === 'none') {
+    // 改用 classList 判斷，確保與 CSS 初始狀態同步
+    if (section.classList.contains('collapsed')) {
         content.style.display = 'block';
         icon.textContent = '▼';
         section.classList.remove('collapsed');
@@ -1597,8 +1618,7 @@ function toggleEvolutionPaths(button) {
     }
 }
 
-
-// \u81ea\u52d5\u8f09\u5165\u9810\u8a2d JSON \u8cc7\u6599 (GitHub Pages \u7248\u672c)
+// 自動載入預設 JSON 資料 (GitHub Pages 版本)
 async function autoLoadDefaultData() {
     try {
         const response = await fetch('data/sample-data.json');
@@ -1619,10 +1639,10 @@ async function autoLoadDefaultData() {
             const sheetData = sheetInfo.data || sheetInfo;
             const sheetLinks = sheetInfo.links || null;
 
-            // \u5efa\u7acb sheet \u7269\u4ef6
+            // 建立 sheet 物件
             const sheet = {};
 
-            // \u586b\u5165\u8cc7\u6599
+            // 填入資料
             sheetData.forEach((row, rowIndex) => {
                 row.forEach((cellValue, colIndex) => {
                     const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex });
@@ -1646,7 +1666,7 @@ async function autoLoadDefaultData() {
                 });
             });
 
-            // \u8a2d\u5b9a range
+            // 設定 range
             const maxRow = sheetData.length - 1;
             const maxCol = Math.max(...sheetData.map(row => row.length)) - 1;
             sheet['!ref'] = XLSX.utils.encode_range({
@@ -1657,11 +1677,11 @@ async function autoLoadDefaultData() {
             currentWorkbook.Sheets[sheetName] = sheet;
         });
 
-        // \u986f\u793a\u9996\u9801
+        // 顯示首頁
         showHomeView();
     } catch (error) {
         console.error('Error loading data:', error);
         document.getElementById('welcomeView').innerHTML =
-            '\u003ch2\u003e\u8cc7\u6599\u8f09\u5165\u5931\u6557\u003c/h2\u003e\u003cp\u003e\u7121\u6cd5\u8f09\u5165\u9810\u8a2d\u8cc7\u6599\uff0c\u8acb\u6aa2\u67e5 data/sample-data.json \u662f\u5426\u5b58\u5728\u3002\u003c/p\u003e';
+            '<h2>資料載入失敗</h2><p>無法載入預設資料，請檢查 data/sample-data.json 是否存在。</p>';
     }
 }

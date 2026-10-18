@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://pandaaki.github.io/Digiwiki/sitemap.xml

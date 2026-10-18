@@ -29,9 +29,9 @@ const checks = [
     {
         name: 'DOMContentLoaded 呼叫 autoLoadDefaultData',
         test: () => {
-            const domContentLoadedMatch = scriptContent.match(/document\.addEventListener\('DOMContentLoaded'[\s\S]*?\}\);/);
-            if (!domContentLoadedMatch) return false;
-            return domContentLoadedMatch[0].includes('autoLoadDefaultData()');
+            const domContentLoadedMatch = scriptContent.match(/document\.addEventListener\('DOMContentLoaded'[\s\S]*?^function /m);
+            const contentToCheck = domContentLoadedMatch ? domContentLoadedMatch[0] : scriptContent;
+            return contentToCheck.includes('autoLoadDefaultData()');
         },
         fix: "在 DOMContentLoaded 事件監聽器中加入: autoLoadDefaultData();"
     },
